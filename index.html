@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Budget | ميزانية ذكية</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app-container">
+        <header id="main-header">
+            <h1>ميزانية ذكية</h1>
+        </header>
+
+        <main id="content-area">
+            <div id="home-view">
+                <h2>مرحباً بك!</h2>
+                <p>جاري تحميل الملخص المالي...</p>
+            </div>
+        </main>
+
+        <button id="fab-add-expense" class="fab">
+            +
+        </button>
+
+        <div id="bottom-sheet" class="bottom-sheet">
+            <div class="bottom-sheet-content">
+                <button class="close-btn">إغلاق</button>
+                <h3>إضافة معاملة جديدة</h3>
+                <p>نموذج الإدخال...</p>
+            </div>
+        </div>
+
+        <div id="toast-message" class="toast"></div>
+
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

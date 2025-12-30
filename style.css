@@ -1,0 +1,130 @@
+/* إعادة تعيين بسيطة لضمان الاتساق */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Noto Sans Arabic', sans-serif; /* استخدام الخط العربي */
+}
+
+/* التنسيق العام للجسم وتحديد اتجاه النص */
+body {
+    background-color: #f4f7f9; /* خلفية خفيفة */
+    color: #333;
+    line-height: 1.6;
+    direction: rtl; /* الأهم: تحديد الاتجاه من اليمين لليسار */
+    text-align: right; /* محاذاة النص لليمين */
+}
+
+#app-container {
+    max-width: 500px; /* محاكاة عرض الموبايل */
+    margin: 0 auto;
+    background-color: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    position: relative;
+}
+
+/* الترويسة الرئيسية */
+#main-header {
+    background-color: #007bff; /* لون أساسي أزرق */
+    color: white;
+    padding: 15px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* زر الإجراء العائم (FAB) */
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px; /* وضعه في الزاوية السفلية اليمنى لـ RTL */
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #28a745; /* أخضر للإضافة */
+    color: white;
+    font-size: 28px;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.fab:active {
+    transform: scale(0.95);
+}
+
+/* منطقة المحتوى */
+#content-area {
+    padding: 20px;
+}
+
+/* --- تنسيقات Bottom Sheet (القاع المنزلق) --- */
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%; /* تغطي الشاشة بالكامل مبدئيًا */
+    pointer-events: none; /* لا تتلقى نقرات عند إخفائها */
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.bottom-sheet.visible {
+    opacity: 1;
+    pointer-events: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* خلفية معتمة */
+}
+
+.bottom-sheet-content {
+    background-color: white;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 20px;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    transform: translateY(100%); /* تبدأ من الأسفل */
+    transition: transform 0.3s ease-out;
+}
+
+.bottom-sheet.visible .bottom-sheet-content {
+    transform: translateY(0); /* تظهر لأعلى */
+}
+
+.bottom-sheet-content .close-btn {
+    float: left; /* زر الإغلاق على اليسار في RTL */
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+}
+
+/* --- تنسيقات Toast/Snackbar --- */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 3000;
+}
+
+.toast.show {
+    opacity: 1;
+    visibility: visible;
+}
