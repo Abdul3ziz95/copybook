@@ -71,8 +71,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 100%; /* تغطي الشاشة بالكامل مبدئيًا */
-    pointer-events: none; /* لا تتلقى نقرات عند إخفائها */
+    height: 100%;
+    pointer-events: none;
     z-index: 2000;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -81,7 +81,7 @@ body {
 .bottom-sheet.visible {
     opacity: 1;
     pointer-events: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* خلفية معتمة */
+    background-color: rgba(0, 0, 0, 0.5);
 }
 
 .bottom-sheet-content {
@@ -92,20 +92,24 @@ body {
     width: 100%;
     position: absolute;
     bottom: 0;
-    transform: translateY(100%); /* تبدأ من الأسفل */
+    transform: translateY(100%); 
     transition: transform 0.3s ease-out;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .bottom-sheet.visible .bottom-sheet-content {
-    transform: translateY(0); /* تظهر لأعلى */
+    transform: translateY(0);
 }
 
 .bottom-sheet-content .close-btn {
-    float: left; /* زر الإغلاق على اليسار في RTL */
+    float: left; 
     background: none;
     border: none;
     color: #007bff;
     cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
 }
 
 /* --- تنسيقات Toast/Snackbar --- */
@@ -122,9 +126,104 @@ body {
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
     z-index: 3000;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .toast.show {
     opacity: 1;
     visibility: visible;
+}
+
+/* --- تنسيقات النماذج --- */
+.form-container label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-container input[type="number"],
+.form-container input[type="text"],
+.form-container select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 15px;
+    background-color: #007bff; 
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+    background-color: #0056b3;
+}
+
+/* --- تنسيقات سجل المعاملات --- */
+.transaction-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    cursor: pointer;
+}
+
+.expense-amount {
+    font-weight: bold;
+    color: #dc3545; /* أحمر للمصروفات */
+    font-size: 18px;
+}
+
+.item-details p {
+    margin: 3px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+/* --- تنسيقات الديون (Debt) --- */
+.debt-status {
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+.status-paid {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-unpaid {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* تنسيق بطاقات الملخص في صفحة الديون والصفحة الرئيسية */
+.summary-card {
+    padding: 15px; 
+    background: #e0f7fa; 
+    border-radius: 10px; 
+    margin-bottom: 20px; 
+    border-right: 5px solid #00bcd4; /* لون افتراضي */
 }
