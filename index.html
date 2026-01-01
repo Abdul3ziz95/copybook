@@ -1,111 +1,31 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ميزانيتك المالية الذكية</title>
 
 <style>
-:root{
-  --primary:#0d6efd;
-  --success:#28a745;
-  --danger:#dc3545;
-  --bg:#f4f6f8;
-}
-
-body{
-  font-family:Tahoma;
-  background:var(--bg);
-  margin:0;
-}
-
-header{
-  background:var(--primary);
-  color:#fff;
-  padding:15px;
-  text-align:center;
-  font-size:20px;
-}
-
-.tabs{
-  display:flex;
-  background:#fff;
-}
-
-.tabs button{
-  flex:1;
-  padding:12px;
-  border:none;
-  background:#fff;
-  font-size:15px;
-}
-
-.tabs button.active{
-  background:var(--primary);
-  color:#fff;
-}
-
-.section{
-  display:none;
-  padding:15px;
-}
-
-.section.active{
-  display:block;
-}
-
-.card{
-  background:#fff;
-  padding:15px;
-  border-radius:8px;
-  box-shadow:0 2px 6px rgba(0,0,0,.1);
-  margin-bottom:15px;
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  font-size:15px;
-}
-
-button.action{
-  width:100%;
-  background:var(--success);
-  color:#fff;
-  padding:12px;
-  border:none;
-  border-radius:6px;
-  font-size:16px;
-}
-
-ul{
-  list-style:none;
-  padding:0;
-}
-
-li{
-  background:#eef6ff;
-  margin-top:6px;
-  padding:8px;
-  border-radius:5px;
-}
-
-/* Toast */
-.toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#333;
-  color:#fff;
-  padding:12px 20px;
-  border-radius:30px;
-  display:none;
-}
-.toast.show{
-  display:block;
-}
+:root{--primary:#0d6efd;--success:#28a745;--bg:#f4f6f8}
+body{margin:0;font-family:Tahoma,Arial;background:var(--bg)}
+header{background:var(--primary);color:#fff;padding:15px;text-align:center;font-size:20px}
+.tabs{display:flex;background:#fff}
+.tabs button{flex:1;padding:12px;border:none;background:#fff}
+.tabs button.active{background:var(--primary);color:#fff}
+.section{display:none;padding:15px}
+.section.active{display:block}
+.card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.1);margin-bottom:12px}
+input,select{width:100%;padding:12px;margin:6px 0;font-size:15px;border-radius:8px;border:1px solid #ccc}
+button.action{background:var(--success);color:#fff;border:none;padding:14px;width:100%;border-radius:8px;font-size:16px}
+button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radius:8px;margin-top:6px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 22px;border-radius:30px;display:none}
+.toast.show{display:block}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:none;flex-direction:column;z-index:10}
+.modal header{display:flex;gap:6px;padding:10px;border-bottom:1px solid #ddd}
+.modal-content{padding:15px;overflow:auto;flex:1}
+.list-item{background:#eef6ff;padding:14px;border-radius:12px;margin-bottom:8px;cursor:pointer}
+.detail p{margin:8px 0;font-size:15px}
+.detail img{width:100%;border-radius:10px;margin-top:10px}
 </style>
 </head>
 
@@ -114,115 +34,228 @@ li{
 <header>ميزانيتك المالية الذكية</header>
 
 <div class="tabs">
-  <button class="active" onclick="openTab('expenses')">المصروفات</button>
-  <button onclick="openTab('rights')">الحقوق</button>
-  <button onclick="openTab('debts')">الالتزامات</button>
+<button class="active" onclick="openTab('expenses')">💸 مصروفات</button>
+<button onclick="openTab('rights')">🤝 حقوق</button>
+<button onclick="openTab('debts')">📌 التزامات</button>
 </div>
 
 <!-- المصروفات -->
 <div id="expenses" class="section active">
-  <div class="card">
-    <input id="eAmount" type="number" placeholder="المبلغ">
-    <select id="eType">
-      <option value="">اختر الفئة</option>
-      <option>مواصلات</option>
-      <option>طعام</option>
-      <option>فواتير</option>
-      <option>ترفيه</option>
-      <option>صحة</option>
-    </select>
-    <input id="eDate" type="date">
-    <button class="action" onclick="addExpense()">حفظ</button>
-  </div>
-  <ul id="eList"></ul>
+<div class="card">
+<input id="eAmount" placeholder="المبلغ" inputmode="numeric" oninput="formatAmount(this)">
+<select id="eType">
+<option value="">الفئة</option>
+<option>طعام</option><option>مواصلات</option><option>فواتير</option>
+<option>إيجار</option><option>صحة</option><option>ترفيه</option><option>تسوق</option>
+</select>
+<input id="eDesc" placeholder="وصف / ملاحظة">
+<input id="eDate" type="datetime-local" placeholder="📅 الوقت والتاريخ">
+<input id="eImg" type="file" accept="image/*">
+<button class="action" onclick="addExpense()">حفظ</button>
+<button class="secondary" onclick="openLog('exp')">📂 عرض السجل</button>
+</div>
 </div>
 
 <!-- الحقوق -->
 <div id="rights" class="section">
-  <div class="card">
-    <input id="rName" placeholder="الاسم">
-    <input id="rAmount" type="number" placeholder="المبلغ">
-    <input id="rDate" type="date">
-    <select id="rStatus">
-      <option value="">الحالة</option>
-      <option>مدفوع</option>
-      <option>غير مدفوع</option>
-    </select>
-    <button class="action" onclick="addRight()">حفظ</button>
-  </div>
-  <ul id="rList"></ul>
+<div class="card">
+<input id="rName" placeholder="اسم الشخص">
+<select id="rType">
+<option value="">نوع الحق</option>
+<option>دين شخصي</option><option>سلفة</option><option>بيع</option><option>مشاركة</option>
+</select>
+<input id="rAmount" placeholder="المبلغ" inputmode="numeric" oninput="formatAmount(this)">
+<input id="rDesc" placeholder="وصف / ملاحظة">
+<input id="rDate" type="datetime-local" placeholder="📅 الوقت والتاريخ">
+<select id="rStatus"><option value="">الحالة</option><option>مدفوع</option><option>غير مدفوع</option></select>
+<button class="action" onclick="addRight()">حفظ</button>
+<button class="secondary" onclick="openLog('rig')">📂 عرض السجل</button>
+</div>
 </div>
 
 <!-- الالتزامات -->
 <div id="debts" class="section">
-  <div class="card">
-    <input id="dName" placeholder="الاسم">
-    <input id="dAmount" type="number" placeholder="المبلغ">
-    <input id="dDate" type="date">
-    <select id="dStatus">
-      <option value="">الحالة</option>
-      <option>مدفوع</option>
-      <option>غير مدفوع</option>
-    </select>
-    <button class="action" onclick="addDebt()">حفظ</button>
-  </div>
-  <ul id="dList"></ul>
+<div class="card">
+<select id="dType">
+<option value="">نوع الالتزام</option>
+<option>كهرباء</option><option>ماء</option><option>إنترنت</option>
+<option>إيجار</option><option>دين</option>
+</select>
+<input id="dAmount" placeholder="المبلغ" inputmode="numeric" oninput="formatAmount(this)">
+<input id="dDesc" placeholder="وصف / ملاحظة">
+<input id="dDate" type="datetime-local" placeholder="📅 الوقت والتاريخ">
+<select id="dStatus"><option value="">الحالة</option><option>مدفوع</option><option>غير مدفوع</option></select>
+<button class="action" onclick="addDebt()">حفظ</button>
+<button class="secondary" onclick="openLog('deb')">📂 عرض السجل</button>
+</div>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- السجل -->
+<div class="modal" id="logModal">
+<header>
+<input id="search" placeholder="🔍 بحث في السجل" oninput="renderLog()">
+<button onclick="closeLog()">إغلاق</button>
+</header>
+<div class="modal-content" id="logContent"></div>
+</div>
+
+<!-- التفاصيل -->
+<div class="modal" id="detailModal">
+<header><button onclick="detailModal.style.display='none'">إغلاق</button></header>
+<div class="modal-content detail" id="detailContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-const data={
-  expenses:JSON.parse(localStorage.getItem("exp"))||[],
-  rights:JSON.parse(localStorage.getItem("rig"))||[],
-  debts:JSON.parse(localStorage.getItem("deb"))||[]
+const db={
+exp:JSON.parse(localStorage.getItem("exp"))||[],
+rig:JSON.parse(localStorage.getItem("rig"))||[],
+deb:JSON.parse(localStorage.getItem("deb"))||[]
 };
+let currentLog="";
 
-function toast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2500);
+// ====== الإشعارات ======
+
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
+
+const notified = JSON.parse(localStorage.getItem("notified")) || [];
+
+// فحص الإشعارات
+function checkNotifications() {
+    const now = new Date().getTime();
+
+    // الالتزامات
+    db.deb.forEach((d, i) => {
+        if (d.الحالة !== "غير مدفوع") return;
+
+        const time = new Date(d.التاريخ).getTime();
+        const id = "deb-" + i;
+
+        // إشعار عند الموعد
+        if (now >= time && !notified.includes(id)) {
+            sendNotification(
+                "📌 التزام مستحق",
+                `لديك ${d.النوع} بقيمة ${d.المبلغ}`
+            );
+            notified.push(id);
+        }
+    });
+
+    // الحقوق
+    db.rig.forEach((r, i) => {
+        if (r.الحالة !== "غير مدفوع") return;
+
+        const time = new Date(r.التاريخ).getTime();
+        const id = "rig-" + i;
+
+        if (now >= time && !notified.includes(id)) {
+            sendNotification(
+                "🤝 حق غير مسدد",
+                `${r.الاسم} عليه ${r.المبلغ} (${r.النوع})`
+            );
+            notified.push(id);
+        }
+    });
+
+    localStorage.setItem("notified", JSON.stringify(notified));
+}
+
+// إرسال الإشعار
+function sendNotification(title, body) {
+    if (Notification.permission === "granted") {
+        new Notification(title, {
+            body: body,
+            icon: "🔔"
+        });
+    }
+}
+
+// تشغيل الفحص عند فتح التطبيق
+checkNotifications();
+
+// فحص كل دقيقة
+setInterval(checkNotifications, 60000);
+
+// =======================
+function formatAmount(el){
+    el.value=el.value.replace(/\D/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,",");
+}
+
+function toastMsg(m){
+    const t=document.getElementById("toast");
+    t.textContent=m;
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"),2500);
 }
 
 function openTab(id){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    event.target.classList.add("active");
 }
 
 function save(){
-  localStorage.setItem("exp",JSON.stringify(data.expenses));
-  localStorage.setItem("rig",JSON.stringify(data.rights));
-  localStorage.setItem("deb",JSON.stringify(data.debts));
+    localStorage.setItem("exp",JSON.stringify(db.exp));
+    localStorage.setItem("rig",JSON.stringify(db.rig));
+    localStorage.setItem("deb",JSON.stringify(db.deb));
 }
 
-function render(){
-  eList.innerHTML=data.expenses.map(e=>`<li>${e.amount} - ${e.type} - ${e.date}</li>`).join('');
-  rList.innerHTML=data.rights.map(r=>`<li>${r.amount} - ${r.name} - ${r.status}</li>`).join('');
-  dList.innerHTML=data.debts.map(d=>`<li>${d.amount} - ${d.name} - ${d.status}</li>`).join('');
-}
+function resetExpense(){eAmount.value=eDesc.value="";eType.value="";eDate.value="";eImg.value=""}
+function resetRight(){rName.value=rAmount.value=rDesc.value="";rType.value=rStatus.value="";rDate.value=""}
+function resetDebt(){dAmount.value=dDesc.value="";dType.value=dStatus.value="";dDate.value=""}
 
 function addExpense(){
-  if(!eAmount.value||!eType.value||!eDate.value) return toast("أكمل جميع الحقول");
-  data.expenses.push({amount:eAmount.value,type:eType.value,date:eDate.value});
-  save(); render(); toast("تم الحفظ");
+    if(!eAmount.value||!eType.value||!eDate.value)return toastMsg("أكمل البيانات");
+    const r=new FileReader();
+    r.onload=()=>{
+        db.exp.unshift({المبلغ:eAmount.value,الفئة:eType.value,الوصف:eDesc.value,التاريخ:eDate.value,صورة:r.result||null});
+        save();resetExpense();toastMsg("تم حفظ المصروف");
+    };
+    eImg.files[0]?r.readAsDataURL(eImg.files[0]):r.onload();
 }
 
 function addRight(){
-  if(!rName.value||!rAmount.value||!rDate.value||!rStatus.value) return toast("أكمل جميع الحقول");
-  data.rights.push({name:rName.value,amount:rAmount.value,status:rStatus.value});
-  save(); render(); toast("تم الحفظ");
+    if(!rName.value||!rAmount.value||!rDate.value||!rStatus.value)return toastMsg("أكمل البيانات");
+    db.rig.unshift({الاسم:rName.value,النوع:rType.value,المبلغ:rAmount.value,الوصف:rDesc.value,التاريخ:rDate.value,الحالة:rStatus.value});
+    save();resetRight();toastMsg("تم حفظ الحق");
 }
 
 function addDebt(){
-  if(!dName.value||!dAmount.value||!dDate.value||!dStatus.value) return toast("أكمل جميع الحقول");
-  data.debts.push({name:dName.value,amount:dAmount.value,status:dStatus.value});
-  save(); render(); toast("تم الحفظ");
+    if(!dType.value||!dAmount.value||!dDate.value||!dStatus.value)return toastMsg("أكمل البيانات");
+    db.deb.unshift({النوع:dType.value,المبلغ:dAmount.value,الوصف:dDesc.value,التاريخ:dDate.value,الحالة:dStatus.value});
+    save();resetDebt();toastMsg("تم حفظ الالتزام");
 }
 
-render();
+function openLog(t){
+    currentLog=t;
+    logModal.style.display="flex";
+    renderLog();
+}
+
+function closeLog(){
+    logModal.style.display="none";
+}
+
+function renderLog(){
+    const q=(search.value||"").toLowerCase();
+    const list=db[currentLog].filter(i=>JSON.stringify(i).toLowerCase().includes(q));
+    logContent.innerHTML=list.map(i=>{
+        const title=`${i.الفئة||i.النوع} - ${i.المبلغ}`;
+        return `<div class="list-item" onclick='showDetail(${JSON.stringify(i)})'>${title}</div>`;
+    }).join("");
+}
+
+function showDetail(o){
+    detailModal.style.display="flex";
+    detailContent.innerHTML=Object.entries(o).map(([k,v])=>{
+        if(k==="صورة" && v) return `<p><b>صورة الفاتورة:</b></p><img src="${v}">`;
+        return `<p><b>${k}:</b> ${v||"—"}</p>`;
+    }).join("");
+}
 </script>
 
 </body>
