@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -37,6 +38,7 @@ button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radi
 <button class="active" onclick="openTab('expenses')">💸 مصروفات</button>
 <button onclick="openTab('rights')">🤝 حقوق</button>
 <button onclick="openTab('debts')">📌 التزامات</button>
+<button onclick="openTab('stats')">📊 الإحصائيات</button>
 </div>
 
 <!-- المصروفات -->
@@ -90,6 +92,30 @@ button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radi
 </div>
 </div>
 
+<!-- الإحصائيات -->
+<div id="stats" class="section">
+<div class="card">
+<h3>💸 المصروفات</h3>
+<p>الإجمالي: <b id="sExpTotal">0</b></p>
+<p>عدد العمليات: <b id="sExpCount">0</b></p>
+<p>أعلى فئة: <b id="sTopCat">—</b></p>
+</div>
+
+<div class="card">
+<h3>🤝 الحقوق</h3>
+<p>الإجمالي: <b id="sRigTotal">0</b></p>
+<p>مدفوع: <b id="sRigPaid">0</b></p>
+<p>غير مدفوع: <b id="sRigUnpaid">0</b></p>
+</div>
+
+<div class="card">
+<h3>📌 الالتزامات</h3>
+<p>الإجمالي: <b id="sDebTotal">0</b></p>
+<p>مدفوع: <b id="sDebPaid">0</b></p>
+<p>متبقي: <b id="sDebUnpaid">0</b></p>
+</div>
+</div>
+
 <!-- السجل -->
 <div class="modal" id="logModal">
 <header>
@@ -108,22 +134,69 @@ button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radi
 <div class="toast" id="toast"></div>
 
 <script>
-const db={
-exp:JSON.parse(localStorage.getItem("exp"))||[],
-rig:JSON.parse(localStorage.getItem("rig"))||[],
-deb:JSON.parse(localStorage.getItem("deb"))||[]
-};
-let currentLog="";
+// ===== الإحصائيات ======
+function parseAmount(v){
+    return Number(v.replace(/,/g,''))||0;
+}
+
+function updateStats(){
+    // المصروفات
+    let expTotal=0, cats={}, expCount=db.exp.length;
+    db.exp.forEach(e=>{
+        const a=parseAmount(e.المبلغ);
+        expTotal+=a;
+        cats[e.الفئة]=(cats[e.الفئة]||0)+a;
+    });
+    let topCat="—", max=0;
+    for(let c in cats){
+        if(cats[c]>max){max=cats[c];topCat=c;}
+    }
+
+    // الحقوق
+    let rigTotal=0, rigPaid=0, rigUnpaid=0;
+    db.rig.forEach(r=>{
+        const a=parseAmount(r.المبلغ);
+        rigTotal+=a;
+        r.الحالة==="مدفوع"?rigPaid+=a:rigUnpaid+=a;
+    });
+
+    // الالتزامات
+    let debTotal=0, debPaid=0, debUnpaid=0;
+    db.deb.forEach(d=>{
+        const a=parseAmount(d.المبلغ);
+        debTotal+=a;
+        d.الحالة==="مدفوع"?debPaid+=a:debUnpaid+=a;
+    });
+
+    // عرض القيم
+    sExpTotal.textContent=expTotal.toLocaleString();
+    sExpCount.textContent=expCount;
+    sTopCat.textContent=topCat;
+
+    sRigTotal.textContent=rigTotal.toLocaleString();
+    sRigPaid.textContent=rigPaid.toLocaleString();
+    sRigUnpaid.textContent=rigUnpaid.toLocaleString();
+
+    sDebTotal.textContent=debTotal.toLocaleString();
+    sDebPaid.textContent=debPaid.toLocaleString();
+    sDebUnpaid.textContent=debUnpaid.toLocaleString();
+}
+
+// تحديث تلقائي
+updateStats();
+const oldSave=save;
+save=function(){
+    oldSave();
+    updateStats();
+}
 
 // ====== الإشعارات ======
-
 if ("Notification" in window) {
     Notification.requestPermission();
 }
 
 const notified = JSON.parse(localStorage.getItem("notified")) || [];
 
-// فحص الإشعارات
 function checkNotifications() {
     const now = new Date().getTime();
 
@@ -163,7 +236,6 @@ function checkNotifications() {
     localStorage.setItem("notified", JSON.stringify(notified));
 }
 
-// إرسال الإشعار
 function sendNotification(title, body) {
     if (Notification.permission === "granted") {
         new Notification(title, {
@@ -260,4 +332,3 @@ function showDetail(o){
 
 </body>
 </html>
-
