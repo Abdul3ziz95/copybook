@@ -19,7 +19,7 @@ header{background:var(--p);color:#fff;padding:15px;text-align:center;font-size:2
 input,select{width:100%;padding:12px;margin:6px 0;font-size:15px;border-radius:8px;border:1px solid #ccc}
 button.action{background:var(--s);color:#fff;border:none;padding:14px;width:100%;border-radius:8px;font-size:16px}
 button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radius:8px;margin-top:6px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 22px;border-radius:30px;display:none}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 22px;border-radius:30px;display:none;z-index:100}
 .toast.show{display:block}
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:none;flex-direction:column;z-index:10}
 .modal header{display:flex;gap:6px;padding:10px;border-bottom:1px solid #ddd}
@@ -55,7 +55,6 @@ input[type="file"]:before {
 <button onclick="openTab('stats')">📊 الإحصائيات</button>
 </div>
 
-<!-- المصروفات -->
 <div id="expenses" class="section active">
 <div class="card">
 <input id="eAmount" type="text" placeholder="💵 المبلغ" oninput="formatAmount(this)" pattern="[0-9]*" inputmode="decimal">
@@ -73,7 +72,6 @@ input[type="file"]:before {
 </div>
 </div>
 
-<!-- الحقوق -->
 <div id="rights" class="section">
 <div class="card">
 <input id="rName" placeholder="اسم الشخص">
@@ -95,7 +93,6 @@ input[type="file"]:before {
 </div>
 </div>
 
-<!-- الالتزامات -->
 <div id="debts" class="section">
 <div class="card">
 <select id="dType">
@@ -117,7 +114,6 @@ input[type="file"]:before {
 </div>
 </div>
 
-<!-- الإحصائيات -->
 <div id="stats" class="section">
 <div class="card">
 <h3>💸 المصروفات</h3>
@@ -139,7 +135,6 @@ input[type="file"]:before {
 </div>
 </div>
 
-<!-- السجل -->
 <div class="modal" id="logModal">
 <header>
 <input id="search" placeholder="🔍 بحث" oninput="renderLog()">
@@ -148,10 +143,9 @@ input[type="file"]:before {
 <div class="modal-content" id="logContent"></div>
 </div>
 
-<!-- التفاصيل -->
 <div class="modal" id="detailModal">
 <header>
-<button onclick="detailModal.style.display='none'">إغلاق</button>
+<button onclick="closeDetailAndClearEditMode()">إغلاق</button>
 </header>
 <div class="modal-content detail" id="detailContent"></div>
 </div>
@@ -159,32 +153,118 @@ input[type="file"]:before {
 <div class="toast" id="toast"></div>
 
 <script>
-const db = {
-  exp: JSON.parse(localStorage.getItem("exp") || "[]"),
-  rig: JSON.parse(localStorage.getItem("rig") || "[]"),
-  deb: JSON.parse(localStorage.getItem("deb") || "[]")
-};
+// ===================================================
+// 1. إعداد IndexedDB
+// ===================================================
+const IDB_NAME = "MySmartBudgetDB";
+const IDB_VERSION = 1;
+const STORE_NAMES = ["exp", "rig", "deb"]; 
+let db = { exp: [], rig: [], deb: [] }; 
+let IDB_connection = null; 
 
 let currentLog = "", editMode = null;
 
-function save() {
-  localStorage.setItem("exp", JSON.stringify(db.exp));
-  localStorage.setItem("rig", JSON.stringify(db.rig));
-  localStorage.setItem("deb", JSON.stringify(db.deb));
-  updateStats();  // Update stats after saving data
+function initDB() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+        toastMsg("المتصفح لا يدعم IndexedDB.");
+        return reject(new Error("IndexedDB not supported."));
+    }
+
+    const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+
+    request.onerror = (e) => {
+      console.error("IndexedDB error:", e.target.error);
+      reject(e.target.error);
+    };
+
+    request.onsuccess = (e) => {
+      IDB_connection = e.target.result;
+      console.log("IndexedDB opened successfully.");
+      resolve(IDB_connection);
+      loadAllData().then(updateStats);
+    };
+
+    request.onupgradeneeded = (e) => {
+      IDB_connection = e.target.result;
+      STORE_NAMES.forEach(storeName => {
+        if (!IDB_connection.objectStoreNames.contains(storeName)) {
+          IDB_connection.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+        }
+      });
+      console.log("Database upgrade complete.");
+    };
+  });
 }
 
+initDB();
+
+function saveData(storeName, data) {
+  return new Promise((resolve, reject) => {
+    if (!IDB_connection) return reject(new Error("Database not connected."));
+
+    const transaction = IDB_connection.transaction([storeName], "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.put(data);
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function deleteFromDB(storeName, id) {
+  return new Promise((resolve, reject) => {
+    if (!IDB_connection) return reject(new Error("Database not connected."));
+
+    const transaction = IDB_connection.transaction([storeName], "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.delete(id); 
+
+    request.onsuccess = () => resolve();
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function loadStoreData(storeName) {
+  return new Promise((resolve) => {
+    if (!IDB_connection) return resolve([]); 
+    
+    const transaction = IDB_connection.transaction([storeName], "readonly");
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+
+    request.onsuccess = (e) => resolve(e.target.result.reverse());
+    request.onerror = () => resolve([]);
+  });
+}
+
+async function loadAllData() {
+    const [expData, rigData, debData] = await Promise.all([
+        loadStoreData('exp'),
+        loadStoreData('rig'),
+        loadStoreData('deb')
+    ]);
+    db.exp = expData;
+    db.rig = rigData;
+    db.deb = debData;
+    if (logModal.style.display === "flex") renderLog();
+}
+
+
+// ===================================================
+// 2. وظائف الأدوات المساعدة
+// ===================================================
+
 function formatAmount(e) {
-  e.value = e.value.replace(/[^\d.]/g, ''); // Remove anything that is not a number or a dot
+  e.value = e.value.replace(/[^\d.]/g, ''); 
   const parts = e.value.split('.');
   if (parts.length > 2) {
-    e.value = parts[0] + '.' + parts[1].slice(0, 2); // Limit to 2 decimals
+    e.value = parts[0] + '.' + parts[1].slice(0, 2);
   }
 }
 
 function parseAmount(amount) {
-  // This function converts the amount to a float value
-  return parseFloat(amount.replace(/[^\d.-]/g, '')) || 0;
+  return parseFloat(String(amount).replace(/[^\d.-]/g, '')) || 0;
 }
 
 function toastMsg(m) {
@@ -198,43 +278,128 @@ function openTab(id) {
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   event.target.classList.add("active");
+  // **إضافة مهمة:** مسح وضع التعديل عند التبديل بين التبويبات للتأكد من عدم التعديل بالخطأ
+  editMode = null; 
 }
 
-function addExpense() {
+function clearFields() {
+  eAmount.value = eDesc.value = eType.value = eDate.value = eImg.value = "";
+  rName.value = rAmount.value = rDesc.value = rDate.value = rType.value = rStatus.value = "";
+  dType.value = dAmount.value = dDesc.value = dDate.value = dStatus.value = "";
+}
+
+// **الدالة الجديدة لمسح وضع التعديل عند إغلاق التفاصيل**
+function closeDetailAndClearEditMode() {
+  detailModal.style.display = "none";
+  editMode = null; 
+}
+
+// ===================================================
+// 3. وظائف الإضافة والتعديل والحذف (CRUD)
+// ===================================================
+
+async function addExpense() { 
   if (!eAmount.value || !eType.value || !eDate.value) return toastMsg("أكمل البيانات");
-  const data = { المبلغ: eAmount.value, الفئة: eType.value, الوصف: eDesc.value, التاريخ: eDate.value, صورة: null };
-  const done = () => {
-    if (editMode && editMode.type === "exp") { db.exp[editMode.index] = data; toastMsg("تم التعديل"); editMode = null; }
-    else { db.exp.unshift(data); toastMsg("تم الحفظ"); }
-    save();
-    clearFields(); // Clear fields after saving
-    updateStats(); // Update stats
+
+  const isEditing = editMode && editMode.type === "exp";
+  const oldData = isEditing ? db.exp[editMode.index] : {};
+
+  const data = { 
+    المبلغ: eAmount.value, 
+    الفئة: eType.value, 
+    الوصف: eDesc.value, 
+    التاريخ: eDate.value, 
+    صورة: oldData.صورة || null
   };
+
+  if (isEditing) {
+      data.id = oldData.id;
+  }
+  
+  const done = async () => {
+    try {
+        await saveData('exp', data); 
+        toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
+        editMode = null; 
+        await loadAllData(); 
+        clearFields();
+        updateStats();
+    } catch (error) {
+        toastMsg("فشل الحفظ. تحقق من Console.");
+        console.error(error);
+    }
+  };
+
   if (eImg.files[0]) {
     const r = new FileReader();
     r.onload = () => { data.صورة = r.result; done(); };
     r.readAsDataURL(eImg.files[0]);
-  } else done();
+  } else {
+      done(); 
+  }
 }
 
-function addRight() {
+async function addRight() {
   if (!rName.value || !rAmount.value || !rDate.value || !rStatus.value) return toastMsg("أكمل البيانات");
-  const data = { الاسم: rName.value, النوع: rType.value, المبلغ: rAmount.value, الوصف: rDesc.value, التاريخ: rDate.value, الحالة: rStatus.value };
-  if (editMode && editMode.type === "rig") { db.rig[editMode.index] = data; editMode = null; toastMsg("تم التعديل"); }
-  else { db.rig.unshift(data); toastMsg("تم الحفظ"); }
-  save();
-  clearFields();
-  updateStats(); // Update stats
+  
+  const isEditing = editMode && editMode.type === "rig";
+  const oldData = isEditing ? db.rig[editMode.index] : {};
+
+  const data = { 
+    الاسم: rName.value, 
+    النوع: rType.value, 
+    المبلغ: rAmount.value, 
+    الوصف: rDesc.value, 
+    التاريخ: rDate.value, 
+    الحالة: rStatus.value 
+  };
+  
+  if (isEditing) {
+      data.id = oldData.id;
+  }
+  
+  try {
+      await saveData('rig', data);
+      toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
+      editMode = null;
+      await loadAllData(); 
+      clearFields();
+      updateStats();
+  } catch (error) {
+      toastMsg("فشل الحفظ. تحقق من Console.");
+      console.error(error);
+  }
 }
 
-function addDebt() {
+async function addDebt() {
   if (!dType.value || !dAmount.value || !dDate.value || !dStatus.value) return toastMsg("أكمل البيانات");
-  const data = { النوع: dType.value, المبلغ: dAmount.value, الوصف: dDesc.value, التاريخ: dDate.value, الحالة: dStatus.value };
-  if (editMode && editMode.type === "deb") { db.deb[editMode.index] = data; editMode = null; toastMsg("تم التعديل"); }
-  else { db.deb.unshift(data); toastMsg("تم الحفظ"); }
-  save();
-  clearFields();
-  updateStats(); // Update stats
+  
+  const isEditing = editMode && editMode.type === "deb";
+  const oldData = isEditing ? db.deb[editMode.index] : {};
+
+  const data = { 
+    النوع: dType.value, 
+    المبلغ: dAmount.value, 
+    الوصف: dDesc.value, 
+    التاريخ: dDate.value, 
+    الحالة: dStatus.value 
+  };
+  
+  if (isEditing) {
+      data.id = oldData.id;
+  }
+  
+  try {
+      await saveData('deb', data);
+      toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
+      editMode = null;
+      await loadAllData(); 
+      clearFields();
+      updateStats();
+  } catch (error) {
+      toastMsg("فشل الحفظ. تحقق من Console.");
+      console.error(error);
+  }
 }
 
 function openLog(t) {
@@ -249,75 +414,127 @@ function renderLog() {
   const q = (search.value || "").toLowerCase();
   logContent.innerHTML = db[currentLog]
     .filter(i => JSON.stringify(i).toLowerCase().includes(q))
-    .map((i, idx) => `<div class="list-item" onclick='showDetail(${JSON.stringify(i)},"${currentLog}",${idx})'>${i.الفئة || i.النوع} - ${i.المبلغ}</div>`)
+    .map((i, idx) => `<div class="list-item" onclick='showDetail(${JSON.stringify(i)},"${currentLog}",${idx})'>${i.الفئة || i.النوع || i.الاسم} - ${i.المبلغ}</div>`)
     .join("");
 }
 
 function showDetail(o, type, index) {
-  editMode = { type, index };
+  editMode = { type, index }; // تعيين وضع التعديل (هذا مطلوب لعمليتي التعديل والحذف)
   detailModal.style.display = "flex";
   detailContent.innerHTML = Object.entries(o).map(([k, v]) => {
     if (k === "صورة" && v) return `<p><b>صورة:</b></p><img src="${v}">`;
+    if (k === "id") return ""; 
     return `<p><b>${k}:</b> ${v || "—"}</p>`;
   }).join("") + `<button class="action" onclick="editTransaction()">✏️ تعديل</button>
   <button class="secondary" onclick="deleteTransaction()">🗑️ حذف</button>`;
 }
 
 function editTransaction() {
+  const currentData = db[editMode.type][editMode.index];
+
   if (editMode && editMode.type === "exp") {
-    eAmount.value = db.exp[editMode.index].المبلغ;
-    eType.value = db.exp[editMode.index].الفئة;
-    eDesc.value = db.exp[editMode.index].الوصف;
-    eDate.value = db.exp[editMode.index].التاريخ;
-    if (db.exp[editMode.index].صورة) {
-      eImg.setAttribute('data-src', db.exp[editMode.index].صورة);
-    }
+    eAmount.value = currentData.المبلغ;
+    eType.value = currentData.الفئة;
+    eDesc.value = currentData.الوصف;
+    eDate.value = currentData.التاريخ;
   }
   if (editMode && editMode.type === "rig") {
-    rName.value = db.rig[editMode.index].الاسم;
-    rAmount.value = db.rig[editMode.index].المبلغ;
-    rDesc.value = db.rig[editMode.index].الوصف;
-    rDate.value = db.rig[editMode.index].التاريخ;
-    rStatus.value = db.rig[editMode.index].الحالة;
+    rName.value = currentData.الاسم;
+    rAmount.value = currentData.المبلغ;
+    rDesc.value = currentData.الوصف;
+    rDate.value = currentData.التاريخ;
+    rStatus.value = currentData.الحالة;
   }
   if (editMode && editMode.type === "deb") {
-    dType.value = db.deb[editMode.index].النوع;
-    dAmount.value = db.deb[editMode.index].المبلغ;
-    dDesc.value = db.deb[editMode.index].الوصف;
-    dDate.value = db.deb[editMode.index].التاريخ;
-    dStatus.value = db.deb[editMode.index].الحالة;
+    dType.value = currentData.النوع;
+    dAmount.value = currentData.المبلغ;
+    dDesc.value = currentData.الوصف;
+    dDate.value = currentData.التاريخ;
+    dStatus.value = currentData.الحالة;
   }
+  
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+
+  let targetTab;
+  if (editMode.type === "exp") targetTab = 'expenses';
+  else if (editMode.type === "rig") targetTab = 'rights';
+  else if (editMode.type === "deb") targetTab = 'debts';
+
+  document.getElementById(targetTab).classList.add("active");
+  document.querySelector(`[onclick="openTab('${targetTab}')"]`).classList.add("active");
+
   detailModal.style.display = "none";
 }
 
-function deleteTransaction() {
+async function deleteTransaction() {
   if (!confirm("حذف المعاملة؟")) return;
-  db[editMode.type].splice(editMode.index, 1);
-  editMode = null;
-  save();
-  detailModal.style.display = "none";
-  toastMsg("تم الحذف");
+  
+  const idToDelete = db[editMode.type][editMode.index].id;
+  
+  try {
+      await deleteFromDB(editMode.type, idToDelete);
+      editMode = null; 
+      await loadAllData(); 
+      toastMsg("تم الحذف");
+      detailModal.style.display = "none";
+      updateStats();
+  } catch (error) {
+      toastMsg("فشل الحذف.");
+      console.error(error);
+  }
 }
 
-function clearFields() {
-  // Clear fields after saving or editing
-  eAmount.value = eDesc.value = eType.value = eDate.value = eImg.value = "";
-  rName.value = rAmount.value = rDesc.value = rDate.value = rType.value = rStatus.value = "";
-  dType.value = dAmount.value = dDesc.value = dDate.value = dStatus.value = "";
-}
+// ===================================================
+// 4. وظائف الإحصائيات (Stats)
+// ===================================================
 
 function updateStats() {
-  let et = 0, ec = db.exp.length, cats = {}, rt = 0, rp = 0, ru = 0, dt = 0, dp = 0, du = 0;
-  db.exp.forEach(e => { let a = parseAmount(e.المبلغ); et += a; cats[e.الفئة] = (cats[e.الفئة] || 0) + a });
-  for (let c in cats) { if (cats[c] > 0) sTopCat.textContent = c }
-  db.rig.forEach(r => { let a = parseAmount(r.المبلغ); rt += a; r.الحالة === "مدفوع" ? rp += a : ru += a });
-  db.deb.forEach(d => { let a = parseAmount(d.المبلغ); dt += a; d.الحالة === "مدفوع" ? dp += a : du += a });
-  sExpTotal.textContent = et.toLocaleString(); sExpCount.textContent = ec;
-  sRigTotal.textContent = rt.toLocaleString(); sRigPaid.textContent = rp.toLocaleString(); sRigUnpaid.textContent = ru.toLocaleString();
-  sDebTotal.textContent = dt.toLocaleString(); sDebPaid.textContent = dp.toLocaleString(); sDebUnpaid.textContent = du.toLocaleString();
-}
+  let et = 0, ec = db.exp.length;
+  let cats = {}; 
+  
+  let rt = 0, rp = 0, ru = 0;
+  let dt = 0, dp = 0, du = 0;
 
-updateStats();
+  db.exp.forEach(e => { 
+    let a = parseAmount(e.المبلغ); 
+    et += a; 
+    cats[e.الفئة] = (cats[e.الفئة] || 0) + a;
+  });
+
+  let topCatName = '—';
+  let maxCatAmount = 0;
+  for (let cat in cats) { 
+    if (cats[cat] > maxCatAmount) {
+      maxCatAmount = cats[cat];
+      topCatName = cat;
+    }
+  }
+
+  db.rig.forEach(r => { 
+    let a = parseAmount(r.المبلغ); 
+    rt += a; 
+    r.الحالة === "مدفوع" ? rp += a : ru += a;
+  });
+
+  db.deb.forEach(d => { 
+    let a = parseAmount(d.المبلغ); 
+    dt += a; 
+    d.الحالة === "مدفوع" ? dp += a : du += a;
+  });
+
+  sExpTotal.textContent = et.toLocaleString(); 
+  sExpCount.textContent = ec;
+  sTopCat.textContent = topCatName;
+
+  sRigTotal.textContent = rt.toLocaleString(); 
+  sRigPaid.textContent = rp.toLocaleString(); 
+  sRigUnpaid.textContent = ru.toLocaleString();
+  
+  sDebTotal.textContent = dt.toLocaleString(); 
+  sDebPaid.textContent = dp.toLocaleString(); 
+  sDebUnpaid.textContent = du.toLocaleString();
+}
 </script>
 
 </body>
