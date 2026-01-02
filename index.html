@@ -278,7 +278,6 @@ function openTab(id) {
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   event.target.classList.add("active");
-  // **إضافة مهمة:** مسح وضع التعديل عند التبديل بين التبويبات للتأكد من عدم التعديل بالخطأ
   editMode = null; 
 }
 
@@ -288,7 +287,6 @@ function clearFields() {
   dType.value = dAmount.value = dDesc.value = dDate.value = dStatus.value = "";
 }
 
-// **الدالة الجديدة لمسح وضع التعديل عند إغلاق التفاصيل**
 function closeDetailAndClearEditMode() {
   detailModal.style.display = "none";
   editMode = null; 
@@ -321,6 +319,12 @@ async function addExpense() {
         await saveData('exp', data); 
         toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
         editMode = null; 
+        
+        // **التعديل هنا:** العودة إلى السجل بعد التعديل
+        if (isEditing) {
+            openLog('exp'); 
+        }
+        
         await loadAllData(); 
         clearFields();
         updateStats();
@@ -362,6 +366,12 @@ async function addRight() {
       await saveData('rig', data);
       toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
       editMode = null;
+      
+      // **التعديل هنا:** العودة إلى السجل بعد التعديل
+      if (isEditing) {
+          openLog('rig'); 
+      }
+      
       await loadAllData(); 
       clearFields();
       updateStats();
@@ -393,6 +403,12 @@ async function addDebt() {
       await saveData('deb', data);
       toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
       editMode = null;
+      
+      // **التعديل هنا:** العودة إلى السجل بعد التعديل
+      if (isEditing) {
+          openLog('deb'); 
+      }
+      
       await loadAllData(); 
       clearFields();
       updateStats();
@@ -408,7 +424,11 @@ function openLog(t) {
   renderLog();
 }
 
-function closeLog() { logModal.style.display = "none"; }
+function closeLog() { 
+    logModal.style.display = "none"; 
+    // التأكد من مسح وضع التعديل عند إغلاق السجل نفسه (للتأمين)
+    editMode = null; 
+}
 
 function renderLog() {
   const q = (search.value || "").toLowerCase();
@@ -419,7 +439,7 @@ function renderLog() {
 }
 
 function showDetail(o, type, index) {
-  editMode = { type, index }; // تعيين وضع التعديل (هذا مطلوب لعمليتي التعديل والحذف)
+  editMode = { type, index }; 
   detailModal.style.display = "flex";
   detailContent.innerHTML = Object.entries(o).map(([k, v]) => {
     if (k === "صورة" && v) return `<p><b>صورة:</b></p><img src="${v}">`;
@@ -465,20 +485,27 @@ function editTransaction() {
   document.querySelector(`[onclick="openTab('${targetTab}')"]`).classList.add("active");
 
   detailModal.style.display = "none";
+  // **التعديل هنا:** إغلاق نافذة السجل عند الضغط على زر "تعديل"
+  logModal.style.display = "none"; 
 }
 
 async function deleteTransaction() {
   if (!confirm("حذف المعاملة؟")) return;
   
-  const idToDelete = db[editMode.type][editMode.index].id;
+  const typeToDelete = editMode.type;
+  const idToDelete = db[typeToDelete][editMode.index].id;
   
   try {
-      await deleteFromDB(editMode.type, idToDelete);
+      await deleteFromDB(typeToDelete, idToDelete);
       editMode = null; 
       await loadAllData(); 
       toastMsg("تم الحذف");
       detailModal.style.display = "none";
       updateStats();
+      
+      // **الإضافة هنا:** العودة إلى السجل بعد الحذف
+      openLog(typeToDelete);
+      
   } catch (error) {
       toastMsg("فشل الحذف.");
       console.error(error);
