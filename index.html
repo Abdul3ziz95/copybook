@@ -16,7 +16,33 @@ header{background:var(--p);color:#fff;padding:15px;text-align:center;font-size:2
 .section{display:none;padding:15px}
 .section.active{display:block}
 .card{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.1);margin-bottom:12px}
-input,select{width:100%;padding:12px;margin:6px 0;font-size:15px;border-radius:8px;border:1px solid #ccc}
+input,select{width:100%;padding:12px;margin:6px 0;font-size:15px;border-radius:8px;border:1px solid #ccc;box-sizing: border-box;}
+
+/* تنسيق الأيقونة داخل حقل التاريخ - الإضافة الجديدة */
+.datetime-container {
+    position: relative;
+    width: 100%; /* لضمان عرض 100% داخل الـ card */
+    margin: 6px 0; /* استبدال هامش الإدخال العادي */
+}
+
+.datetime-container input[type="datetime-local"] {
+    margin: 0; /* إلغاء الهامش القديم */
+    padding-left: 35px; /* مسافة للأيقونة على اليسار (بداية الحقل في RTL) */
+    box-sizing: border-box;
+}
+
+.calendar-icon {
+    position: absolute;
+    top: 50%;
+    left: 10px; /* موضع الأيقونة من اليسار */
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    z-index: 2;
+    pointer-events: none; 
+    color: var(--p); /* استخدام اللون الأساسي للأيقونة */
+}
+/* نهاية الإضافة الجديدة */
+
 button.action{background:var(--s);color:#fff;border:none;padding:14px;width:100%;border-radius:8px;font-size:16px}
 button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radius:8px;margin-top:6px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 22px;border-radius:30px;display:none;z-index:100}
@@ -27,7 +53,7 @@ button.secondary{background:#ddd;padding:10px;width:100%;border:none;border-radi
 .list-item{background:#eef6ff;padding:14px;border-radius:12px;margin-bottom:8px;cursor:pointer}
 .detail p{margin:8px 0}
 .detail img{width:100%;border-radius:10px;margin-top:10px}
-.date-icon{cursor:pointer;padding-left: 5px;display:inline;position:relative;top:-2px;}
+/* تم إزالة .date-icon */
 input[type="file"]:before {
     content: "إرفاق صورة الفاتورة";
     color: #777;
@@ -41,7 +67,6 @@ input[type="file"]:before {
     margin: 10px 0;
     cursor: pointer;
 }
-/* تنسيق علامة العملة باللون الأخضر */
 .currency-symbol { 
     color: #28a745;
     font-weight: bold;
@@ -70,8 +95,10 @@ input[type="file"]:before {
 <option>إيجار</option><option>صحة</option><option>ترفيه</option><option>تسوق</option>
 </select>
 <input id="eDesc" placeholder="وصف / ملاحظة">
-<input id="eDate" type="datetime-local">
-<span class="date-icon" onclick="openDatePicker()">📅</span>
+<div class="datetime-container">
+    <input id="eDate" type="datetime-local">
+    <span class="calendar-icon">📅</span>
+</div>
 <input id="eImg" type="file" accept="image/*">
 <button class="action" onclick="addExpense()">حفظ</button>
 <button class="secondary" onclick="openLog('exp')">📂 السجل</button>
@@ -87,8 +114,10 @@ input[type="file"]:before {
 </select>
 <input id="rAmount" type="text" placeholder="💵 المبلغ" oninput="formatAmount(this)" pattern="[0-9]*" inputmode="decimal">
 <input id="rDesc" placeholder="وصف / ملاحظة">
-<input id="rDate" type="datetime-local">
-<span class="date-icon" onclick="openDatePicker()">📅</span>
+<div class="datetime-container">
+    <input id="rDate" type="datetime-local">
+    <span class="calendar-icon">📅</span>
+</div>
 <select id="rStatus">
 <option value="">الحالة</option>
 <option>مدفوع</option>
@@ -108,8 +137,10 @@ input[type="file"]:before {
 </select>
 <input id="dAmount" type="text" placeholder="💵 المبلغ" oninput="formatAmount(this)" pattern="[0-9]*" inputmode="decimal">
 <input id="dDesc" placeholder="وصف / ملاحظة">
-<input id="dDate" type="datetime-local">
-<span class="date-icon" onclick="openDatePicker()">📅</span>
+<div class="datetime-container">
+    <input id="dDate" type="datetime-local">
+    <span class="calendar-icon">📅</span>
+</div>
 <select id="dStatus">
 <option value="">الحالة</option>
 <option>مدفوع</option>
@@ -301,16 +332,13 @@ function toastMsg(m) {
   setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
-// **التعديل هنا:** عند تبديل الأقسام، نقوم بمسح الحقول وإلغاء وضع التعديل
 function openTab(id) {
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   event.target.classList.add("active");
   
-  // إلغاء وضع التعديل
   editMode = null; 
-  // إفراغ جميع الحقول
   clearFields(); 
 }
 
@@ -520,9 +548,6 @@ function editTransaction() {
 
   detailModal.style.display = "none";
   logModal.style.display = "none"; 
-  
-  // لا نحتاج لاستدعاء clearFields هنا، لأننا نريد أن تظل الحقول مملوءة لغرض التعديل.
-  // عملية المسح ستتم عند الحفظ أو عند الانتقال لتبويب آخر.
 }
 
 async function deleteTransaction() {
