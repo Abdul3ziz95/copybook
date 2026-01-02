@@ -261,58 +261,39 @@ async function loadAllData() {
 // 2. وظائف الأدوات المساعدة
 // ===================================================
 
-// **تعديل دالة formatAmount:** للسماح بالعلامات العشرية وتنسيق الأرقام أثناء الكتابة
 function formatAmount(input) {
-  // إزالة أي شيء ليس رقماً أو نقطة عشرية
   let value = input.value.replace(/[^\d.]/g, ''); 
   const parts = value.split('.');
   
-  // التأكد من وجود نقطة عشرية واحدة فقط
   if (parts.length > 2) {
     value = parts[0] + '.' + parts.slice(1).join('');
   }
   
-  // فصل الجزء الصحيح عن الجزء العشري
   const integerPart = parts[0];
   const decimalPart = parts[1] ? '.' + parts[1] : '';
   
-  // إضافة فواصل الآلاف (تنسيق بسيط)
-  // ملاحظة: هذا التنسيق يسبب مشاكل في المتصفحات التي لا تدعم توقيت سريع.
-  // سنستخدم toLocaleString في الإحصائيات والسجل، ونترك حقل الإدخال بسيطاً
-  // للحفاظ على الأداء ولتجنب مسح الفاصل العشري أثناء الكتابة
-  
-  // إزالة الفواصل القديمة ثم تطبيق تنسيق الأرقام المحلية (AR)
   const number = parseFloat(integerPart);
   let formattedIntegerPart = isNaN(number) ? '' : number.toLocaleString('ar');
   
-  // إذا كانت القيمة تنتهي بنقطة عشرية (أثناء الكتابة)، نحافظ عليها
   if (input.value.endsWith('.') && !decimalPart) {
       formattedIntegerPart += '.';
   }
 
-  // إعادة تعيين القيمة إلى الحقل
   input.value = formattedIntegerPart + decimalPart;
 }
 
-
-// دالة لتنظيف المبلغ المحفوظ من الفواصل وتحويله إلى رقم
 function parseAmount(amount) {
-  // إزالة جميع الفواصل والرموز غير الضرورية، مع الاحتفاظ بالنقطة العشرية
   return parseFloat(String(amount).replace(/[^0-9.]/g, '')) || 0;
 }
 
-// دالة لتنسيق المبلغ للواجهة (السجل والإحصائيات)
 function formatCurrency(amount) {
     const num = parseAmount(amount);
-    // تنسيق الرقم بفاصل آلاف (Locale: AR)
     const formattedNum = num.toLocaleString('ar', { 
-        minimumFractionDigits: num % 1 === 0 ? 0 : 2, // عرض رقمين عشريين إذا كان هناك جزء عشري
+        minimumFractionDigits: num % 1 === 0 ? 0 : 2,
         maximumFractionDigits: 2 
     });
-    // إضافة علامة العملة الخضراء
     return `<span class="currency-symbol">💰</span> ${formattedNum}`;
 }
-
 
 function toastMsg(m) {
   toast.textContent = m;
@@ -320,12 +301,17 @@ function toastMsg(m) {
   setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
+// **التعديل هنا:** عند تبديل الأقسام، نقوم بمسح الحقول وإلغاء وضع التعديل
 function openTab(id) {
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   event.target.classList.add("active");
+  
+  // إلغاء وضع التعديل
   editMode = null; 
+  // إفراغ جميع الحقول
+  clearFields(); 
 }
 
 function clearFields() {
@@ -350,7 +336,7 @@ async function addExpense() {
   const oldData = isEditing ? db.exp[editMode.index] : {};
 
   const data = { 
-    المبلغ: eAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
+    المبلغ: eAmount.value, 
     الفئة: eType.value, 
     الوصف: eDesc.value, 
     التاريخ: eDate.value, 
@@ -398,7 +384,7 @@ async function addRight() {
   const data = { 
     الاسم: rName.value, 
     النوع: rType.value, 
-    المبلغ: rAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
+    المبلغ: rAmount.value, 
     الوصف: rDesc.value, 
     التاريخ: rDate.value, 
     الحالة: rStatus.value 
@@ -434,7 +420,7 @@ async function addDebt() {
 
   const data = { 
     النوع: dType.value, 
-    المبلغ: dAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
+    المبلغ: dAmount.value, 
     الوصف: dDesc.value, 
     التاريخ: dDate.value, 
     الحالة: dStatus.value 
@@ -477,7 +463,6 @@ function renderLog() {
   const q = (search.value || "").toLowerCase();
   logContent.innerHTML = db[currentLog]
     .filter(i => JSON.stringify(i).toLowerCase().includes(q))
-    // **التعديل هنا:** تطبيق تنسيق العملة على المبلغ في السجل
     .map((i, idx) => `<div class="list-item" onclick='showDetail(${JSON.stringify(i)},"${currentLog}",${idx})'>${i.الفئة || i.النوع || i.الاسم} - ${formatCurrency(i.المبلغ)}</div>`)
     .join("");
 }
@@ -489,7 +474,6 @@ function showDetail(o, type, index) {
     if (k === "صورة" && v) return `<p><b>صورة:</b></p><img src="${v}">`;
     if (k === "id") return ""; 
     
-    // **التعديل هنا:** تنسيق المبلغ في صفحة التفاصيل
     if (k === "المبلغ") {
         return `<p><b>${k}:</b> ${formatCurrency(v)}</p>`;
     }
@@ -536,6 +520,9 @@ function editTransaction() {
 
   detailModal.style.display = "none";
   logModal.style.display = "none"; 
+  
+  // لا نحتاج لاستدعاء clearFields هنا، لأننا نريد أن تظل الحقول مملوءة لغرض التعديل.
+  // عملية المسح ستتم عند الحفظ أو عند الانتقال لتبويب آخر.
 }
 
 async function deleteTransaction() {
@@ -571,7 +558,6 @@ function updateStats() {
   let rt = 0, rp = 0, ru = 0;
   let dt = 0, dp = 0, du = 0;
 
-  // المصروفات - يجب استخدام parseAmount لتحويل النص إلى رقم
   db.exp.forEach(e => { 
     let a = parseAmount(e.المبلغ); 
     et += a; 
@@ -587,21 +573,18 @@ function updateStats() {
     }
   }
 
-  // الحقوق
   db.rig.forEach(r => { 
     let a = parseAmount(r.المبلغ); 
     rt += a; 
     r.الحالة === "مدفوع" ? rp += a : ru += a;
   });
 
-  // الالتزامات
   db.deb.forEach(d => { 
     let a = parseAmount(d.المبلغ); 
     dt += a; 
     d.الحالة === "مدفوع" ? dp += a : du += a;
   });
 
-  // **التعديل هنا:** تطبيق تنسيق العملة على جميع الإجماليات
   sExpTotal.innerHTML = formatCurrency(et); 
   sExpCount.textContent = ec;
   sTopCat.textContent = topCatName;
