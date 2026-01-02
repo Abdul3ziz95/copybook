@@ -41,6 +41,12 @@ input[type="file"]:before {
     margin: 10px 0;
     cursor: pointer;
 }
+/* تنسيق علامة العملة باللون الأخضر */
+.currency-symbol { 
+    color: #28a745;
+    font-weight: bold;
+    font-size: 1.1em;
+}
 </style>
 </head>
 
@@ -255,17 +261,58 @@ async function loadAllData() {
 // 2. وظائف الأدوات المساعدة
 // ===================================================
 
-function formatAmount(e) {
-  e.value = e.value.replace(/[^\d.]/g, ''); 
-  const parts = e.value.split('.');
+// **تعديل دالة formatAmount:** للسماح بالعلامات العشرية وتنسيق الأرقام أثناء الكتابة
+function formatAmount(input) {
+  // إزالة أي شيء ليس رقماً أو نقطة عشرية
+  let value = input.value.replace(/[^\d.]/g, ''); 
+  const parts = value.split('.');
+  
+  // التأكد من وجود نقطة عشرية واحدة فقط
   if (parts.length > 2) {
-    e.value = parts[0] + '.' + parts[1].slice(0, 2);
+    value = parts[0] + '.' + parts.slice(1).join('');
   }
+  
+  // فصل الجزء الصحيح عن الجزء العشري
+  const integerPart = parts[0];
+  const decimalPart = parts[1] ? '.' + parts[1] : '';
+  
+  // إضافة فواصل الآلاف (تنسيق بسيط)
+  // ملاحظة: هذا التنسيق يسبب مشاكل في المتصفحات التي لا تدعم توقيت سريع.
+  // سنستخدم toLocaleString في الإحصائيات والسجل، ونترك حقل الإدخال بسيطاً
+  // للحفاظ على الأداء ولتجنب مسح الفاصل العشري أثناء الكتابة
+  
+  // إزالة الفواصل القديمة ثم تطبيق تنسيق الأرقام المحلية (AR)
+  const number = parseFloat(integerPart);
+  let formattedIntegerPart = isNaN(number) ? '' : number.toLocaleString('ar');
+  
+  // إذا كانت القيمة تنتهي بنقطة عشرية (أثناء الكتابة)، نحافظ عليها
+  if (input.value.endsWith('.') && !decimalPart) {
+      formattedIntegerPart += '.';
+  }
+
+  // إعادة تعيين القيمة إلى الحقل
+  input.value = formattedIntegerPart + decimalPart;
 }
 
+
+// دالة لتنظيف المبلغ المحفوظ من الفواصل وتحويله إلى رقم
 function parseAmount(amount) {
-  return parseFloat(String(amount).replace(/[^\d.-]/g, '')) || 0;
+  // إزالة جميع الفواصل والرموز غير الضرورية، مع الاحتفاظ بالنقطة العشرية
+  return parseFloat(String(amount).replace(/[^0-9.]/g, '')) || 0;
 }
+
+// دالة لتنسيق المبلغ للواجهة (السجل والإحصائيات)
+function formatCurrency(amount) {
+    const num = parseAmount(amount);
+    // تنسيق الرقم بفاصل آلاف (Locale: AR)
+    const formattedNum = num.toLocaleString('ar', { 
+        minimumFractionDigits: num % 1 === 0 ? 0 : 2, // عرض رقمين عشريين إذا كان هناك جزء عشري
+        maximumFractionDigits: 2 
+    });
+    // إضافة علامة العملة الخضراء
+    return `<span class="currency-symbol">💰</span> ${formattedNum}`;
+}
+
 
 function toastMsg(m) {
   toast.textContent = m;
@@ -303,7 +350,7 @@ async function addExpense() {
   const oldData = isEditing ? db.exp[editMode.index] : {};
 
   const data = { 
-    المبلغ: eAmount.value, 
+    المبلغ: eAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
     الفئة: eType.value, 
     الوصف: eDesc.value, 
     التاريخ: eDate.value, 
@@ -320,7 +367,6 @@ async function addExpense() {
         toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
         editMode = null; 
         
-        // **التعديل هنا:** العودة إلى السجل بعد التعديل
         if (isEditing) {
             openLog('exp'); 
         }
@@ -352,7 +398,7 @@ async function addRight() {
   const data = { 
     الاسم: rName.value, 
     النوع: rType.value, 
-    المبلغ: rAmount.value, 
+    المبلغ: rAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
     الوصف: rDesc.value, 
     التاريخ: rDate.value, 
     الحالة: rStatus.value 
@@ -367,7 +413,6 @@ async function addRight() {
       toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
       editMode = null;
       
-      // **التعديل هنا:** العودة إلى السجل بعد التعديل
       if (isEditing) {
           openLog('rig'); 
       }
@@ -389,7 +434,7 @@ async function addDebt() {
 
   const data = { 
     النوع: dType.value, 
-    المبلغ: dAmount.value, 
+    المبلغ: dAmount.value, // القيمة هنا ستكون بالنص ومعها فواصل
     الوصف: dDesc.value, 
     التاريخ: dDate.value, 
     الحالة: dStatus.value 
@@ -404,7 +449,6 @@ async function addDebt() {
       toastMsg(isEditing ? "تم التعديل" : "تم الحفظ");
       editMode = null;
       
-      // **التعديل هنا:** العودة إلى السجل بعد التعديل
       if (isEditing) {
           openLog('deb'); 
       }
@@ -426,7 +470,6 @@ function openLog(t) {
 
 function closeLog() { 
     logModal.style.display = "none"; 
-    // التأكد من مسح وضع التعديل عند إغلاق السجل نفسه (للتأمين)
     editMode = null; 
 }
 
@@ -434,7 +477,8 @@ function renderLog() {
   const q = (search.value || "").toLowerCase();
   logContent.innerHTML = db[currentLog]
     .filter(i => JSON.stringify(i).toLowerCase().includes(q))
-    .map((i, idx) => `<div class="list-item" onclick='showDetail(${JSON.stringify(i)},"${currentLog}",${idx})'>${i.الفئة || i.النوع || i.الاسم} - ${i.المبلغ}</div>`)
+    // **التعديل هنا:** تطبيق تنسيق العملة على المبلغ في السجل
+    .map((i, idx) => `<div class="list-item" onclick='showDetail(${JSON.stringify(i)},"${currentLog}",${idx})'>${i.الفئة || i.النوع || i.الاسم} - ${formatCurrency(i.المبلغ)}</div>`)
     .join("");
 }
 
@@ -444,6 +488,12 @@ function showDetail(o, type, index) {
   detailContent.innerHTML = Object.entries(o).map(([k, v]) => {
     if (k === "صورة" && v) return `<p><b>صورة:</b></p><img src="${v}">`;
     if (k === "id") return ""; 
+    
+    // **التعديل هنا:** تنسيق المبلغ في صفحة التفاصيل
+    if (k === "المبلغ") {
+        return `<p><b>${k}:</b> ${formatCurrency(v)}</p>`;
+    }
+    
     return `<p><b>${k}:</b> ${v || "—"}</p>`;
   }).join("") + `<button class="action" onclick="editTransaction()">✏️ تعديل</button>
   <button class="secondary" onclick="deleteTransaction()">🗑️ حذف</button>`;
@@ -485,7 +535,6 @@ function editTransaction() {
   document.querySelector(`[onclick="openTab('${targetTab}')"]`).classList.add("active");
 
   detailModal.style.display = "none";
-  // **التعديل هنا:** إغلاق نافذة السجل عند الضغط على زر "تعديل"
   logModal.style.display = "none"; 
 }
 
@@ -503,7 +552,6 @@ async function deleteTransaction() {
       detailModal.style.display = "none";
       updateStats();
       
-      // **الإضافة هنا:** العودة إلى السجل بعد الحذف
       openLog(typeToDelete);
       
   } catch (error) {
@@ -523,6 +571,7 @@ function updateStats() {
   let rt = 0, rp = 0, ru = 0;
   let dt = 0, dp = 0, du = 0;
 
+  // المصروفات - يجب استخدام parseAmount لتحويل النص إلى رقم
   db.exp.forEach(e => { 
     let a = parseAmount(e.المبلغ); 
     et += a; 
@@ -538,29 +587,32 @@ function updateStats() {
     }
   }
 
+  // الحقوق
   db.rig.forEach(r => { 
     let a = parseAmount(r.المبلغ); 
     rt += a; 
     r.الحالة === "مدفوع" ? rp += a : ru += a;
   });
 
+  // الالتزامات
   db.deb.forEach(d => { 
     let a = parseAmount(d.المبلغ); 
     dt += a; 
     d.الحالة === "مدفوع" ? dp += a : du += a;
   });
 
-  sExpTotal.textContent = et.toLocaleString(); 
+  // **التعديل هنا:** تطبيق تنسيق العملة على جميع الإجماليات
+  sExpTotal.innerHTML = formatCurrency(et); 
   sExpCount.textContent = ec;
   sTopCat.textContent = topCatName;
 
-  sRigTotal.textContent = rt.toLocaleString(); 
-  sRigPaid.textContent = rp.toLocaleString(); 
-  sRigUnpaid.textContent = ru.toLocaleString();
+  sRigTotal.innerHTML = formatCurrency(rt); 
+  sRigPaid.innerHTML = formatCurrency(rp); 
+  sRigUnpaid.innerHTML = formatCurrency(ru);
   
-  sDebTotal.textContent = dt.toLocaleString(); 
-  sDebPaid.textContent = dp.toLocaleString(); 
-  sDebUnpaid.textContent = du.toLocaleString();
+  sDebTotal.innerHTML = formatCurrency(dt); 
+  sDebPaid.innerHTML = formatCurrency(dp); 
+  sDebUnpaid.innerHTML = formatCurrency(du);
 }
 </script>
 
