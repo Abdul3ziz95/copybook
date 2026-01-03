@@ -1,0 +1,6 @@
+{
+  "appId": "com.example.budgetapp",
+  "appName": "ميزانيتك المالية",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
